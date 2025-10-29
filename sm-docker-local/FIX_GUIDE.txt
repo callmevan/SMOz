@@ -1,0 +1,288 @@
+================================================================================
+              SMOz Project Fix Guide (Token-Server Error Resolution)
+================================================================================
+
+Problem Description:
+--------------------
+Token-Server fails to start due to outdated dependencies from 2018, with error:
+TypeError: Class constructor Uint8Array cannot be invoked without 'new'
+at node_modules/buffer-equal-constant-time/index.js
+
+
+Root Causes:
+------------
+1. Old dependencies like jsonwebtoken@8.4.0 incompatible with modern Node.js
+2. Missing local development SSL certificates
+3. Traefik reverse proxy requires HTTPS access
+
+
+================================================================================
+                            Complete Fix Steps
+================================================================================
+
+【Step 1】Update sm-token-server/package.json
+-----------------------------------------------
+
+Open sm-token-server/package.json in a text editor and replace with:
+
+```json
+{
+  "name": "node-orchestration",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "nodemon -L",
+    "start": "node ./dist/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.20",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/ws": "^8.5.9",
+    "nodemon": "^3.0.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  }
+}
+```
+
+Key Updates:
+- jsonwebtoken: 8.4.0 → 9.0.2
+- express: 4.16.4 → 4.18.2
+- body-parser: 1.18.3 → 1.20.2
+- dotenv: 6.2.0 → 16.3.1
+- All devDependencies updated to latest compatible versions
+
+
+【Step 2】Update sm-token-server/Dockerfile
+-------------------------------------------
+
+Open sm-token-server/Dockerfile and replace with:
+
+```dockerfile
+FROM node:18-alpine AS build
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN npm install && npm cache clean --force
+COPY . .
+RUN npm run build
+
+FROM node:18-alpine
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN npm install --omit=dev && npm cache clean --force
+COPY --from=build /usr/src/app/dist /usr/src/app
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+Key Updates:
+- Pin Node.js version to 18-alpine (LTS version)
+- Change npm ci to npm install (to regenerate lock file)
+
+
+【Step 3】Execute Fix Commands
+------------------------------
+
+======== Option A: Windows PowerShell Users ========
+
+Open PowerShell and run these commands:
+
+# 1. Navigate to project root (adjust path as needed)
+cd "D:\AI of Oz\StudyWithUoA\SMOz"
+
+# 2. Delete old dependency lock file
+Remove-Item "sm-token-server\package-lock.json" -Force -ErrorAction SilentlyContinue
+
+# 3. Generate SSL certificate (for local HTTPS development)
+docker run --rm -v "${PWD}\sm-docker-local\certs:/certs" alpine/openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /certs/local-key.pem -out /certs/local-cert.pem -subj "/C=US/ST=State/L=City/O=Organization/CN=*.app.localhost"
+
+# 4. Enter Docker Compose directory
+cd sm-docker-local
+
+# 5. Stop and remove all existing containers
+docker-compose down
+
+# 6. Remove old token-server image
+docker rmi sm-docker-local-token-server -f
+
+# 7. Rebuild token-server without cache
+docker-compose build --no-cache token-server
+
+# 8. Start all services
+docker-compose up -d
+
+# 9. Wait for services to start (about 10-15 seconds)
+Start-Sleep -Seconds 15
+
+# 10. Check service status
+docker-compose ps
+
+# 11. Check token-server logs (should show "Express server listening on port 3000")
+docker logs token-server
+
+# 12. Check web-client logs (should show "Compiled successfully!")
+docker logs sm-web-client --tail=20
+
+
+======== Option B: Linux/Mac Users ========
+
+Open terminal and run these commands:
+
+# 1. Navigate to project root (adjust path as needed)
+cd "/path/to/your/SMOz"
+
+# 2. Delete old dependency lock file
+rm -f sm-token-server/package-lock.json
+
+# 3. Generate SSL certificate
+docker run --rm -v "$(pwd)/sm-docker-local/certs:/certs" alpine/openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /certs/local-key.pem -out /certs/local-cert.pem -subj "/C=US/ST=State/L=City/O=Organization/CN=*.app.localhost"
+
+# 4. Enter Docker Compose directory
+cd sm-docker-local
+
+# 5. Stop and remove all existing containers
+docker-compose down
+
+# 6. Remove old token-server image
+docker rmi sm-docker-local-token-server -f
+
+# 7. Rebuild token-server without cache
+docker-compose build --no-cache token-server
+
+# 8. Start all services
+docker-compose up -d
+
+# 9. Wait for services to start
+sleep 15
+
+# 10. Check service status
+docker-compose ps
+
+# 11. Check token-server logs
+docker logs token-server
+
+# 12. Check web-client logs
+docker logs sm-web-client --tail=20
+
+
+【Step 4】Access the Application
+---------------------------------
+
+Open browser and visit: https://sm-web.app.localhost
+
+⚠️ Important Notes:
+1. Must use HTTPS (not HTTP)
+2. Browser will show certificate warning (normal for self-signed cert)
+3. Handle certificate warning:
+   - Chrome/Edge: Click "Advanced" → "Proceed to sm-web.app.localhost (unsafe)"
+   - Firefox: Click "Advanced" → "Accept the Risk and Continue"
+
+
+【Step 5】Verify All Services
+------------------------------
+
+All service endpoints:
+✅ Web Frontend:      https://sm-web.app.localhost
+✅ Token Service:     https://token-server.app.localhost
+✅ Orchestration:     https://orchestration-server.app.localhost
+✅ Oz AI Service:     https://oz-server.app.localhost
+
+Check command:
+cd sm-docker-local
+docker-compose ps
+
+All services should show status "Up" or "Running"
+
+
+================================================================================
+                            Troubleshooting
+================================================================================
+
+Issue 1: docker-compose command not found
+Solution: Install Docker Desktop or use 'docker compose' (space not hyphen)
+
+Issue 2: Port already in use
+Solution:
+- Check if ports 3000, 3001, 3002, 8080 are occupied
+- Windows: netstat -ano | findstr "3000"
+- Linux/Mac: lsof -i :3000
+
+Issue 3: Service fails to start
+Solution:
+- Check logs: docker logs <container-name>
+- Rebuild: docker-compose build --no-cache
+- Clean all: docker-compose down -v
+
+Issue 4: Still shows buffer-equal-constant-time error
+Solution:
+- Confirm package.json is correctly updated
+- Confirm package-lock.json is deleted
+- Confirm rebuild used --no-cache flag
+
+Issue 5: Cannot access https://sm-web.app.localhost
+Solution:
+- Confirm certificates generated: ls sm-docker-local/certs/
+- Should see local-cert.pem and local-key.pem
+- Restart Traefik: docker-compose restart traefik
+
+
+================================================================================
+                            Technical Details
+================================================================================
+
+Modified Files:
+1. sm-token-server/package.json - Updated dependency versions
+2. sm-token-server/Dockerfile - Pinned Node.js version
+3. sm-token-server/package-lock.json - Deleted (regenerated)
+4. sm-docker-local/certs/local-cert.pem - Generated SSL certificate
+5. sm-docker-local/certs/local-key.pem - Generated private key
+
+Dependency Updates:
+- jsonwebtoken 8.4.0 → 9.0.2 (fixes buffer-equal-constant-time compatibility)
+- express 4.16.4 → 4.18.2 (security updates)
+- typescript 3.2.2 → 5.2.2 (language features)
+- All other dependencies synchronized to compatible versions
+
+Docker Images:
+- Uses Node.js 18 LTS (Alpine Linux)
+- Multi-stage build for optimized image size
+- Production excludes devDependencies
+
+Network Architecture:
+- Traefik as reverse proxy
+- All services communicate via Docker internal network
+- HTTPS redirect enforced for security
+
+
+================================================================================
+                            Support & Contact
+================================================================================
+
+If you encounter issues:
+1. Check Docker Desktop is running
+2. Verify all file modifications are correct
+3. Check Docker container logs for errors
+4. Re-run complete fix steps
+
+After successful fix:
+- Development environment is ready
+- All services running normally
+- Ready for development work
+
+================================================================================
+                                  END
+================================================================================
+

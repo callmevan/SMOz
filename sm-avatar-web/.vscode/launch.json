@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "sm-web-debug",
+        "type": "chrome",
+        "request": "launch",
+        "url": "http://sm-web.app.localhost",
+        "webRoot": "${workspaceFolder}"
+        
+      }
+    ]
+  }

@@ -1,0 +1,384 @@
+================================================================================
+                    SMOz 项目修复指南 (Token-Server 错误修复)
+================================================================================
+
+问题描述：
+-----------
+Token-Server 因使用 2018 年的旧依赖包导致启动失败，报错：
+TypeError: Class constructor Uint8Array cannot be invoked without 'new'
+at node_modules/buffer-equal-constant-time/index.js
+
+
+修复原因：
+-----------
+1. jsonwebtoken@8.4.0 等旧版本依赖与现代 Node.js 不兼容
+2. 缺少本地开发 SSL 证书
+3. Traefik 反向代理配置需要 HTTPS 访问
+
+
+================================================================================
+                            完整修复步骤
+================================================================================
+
+【步骤 1】更新 sm-token-server/package.json
+-----------------------------------------------
+
+用文本编辑器打开 sm-token-server/package.json，完整替换为以下内容：
+
+```json
+{
+  "name": "node-orchestration",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "nodemon -L",
+    "start": "node ./dist/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.20",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/ws": "^8.5.9",
+    "nodemon": "^3.0.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  }
+}
+```
+
+主要更新：
+- jsonwebtoken: 8.4.0 → 9.0.2
+- express: 4.16.4 → 4.18.2
+- body-parser: 1.18.3 → 1.20.2
+- dotenv: 6.2.0 → 16.3.1
+- 所有 devDependencies 也更新到最新兼容版本
+
+
+【步骤 2】更新 sm-token-server/Dockerfile
+-------------------------------------------
+
+用文本编辑器打开 sm-token-server/Dockerfile，完整替换为以下内容：
+
+```dockerfile
+FROM node:18-alpine AS build
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN npm install && npm cache clean --force
+COPY . .
+RUN npm run build
+
+FROM node:18-alpine
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN npm install --omit=dev && npm cache clean --force
+COPY --from=build /usr/src/app/dist /usr/src/app
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+主要更新：
+- 固定 Node.js 版本为 18-alpine (LTS 版本)
+- 将 npm ci 改为 npm install (因为要重新生成 lock 文件)
+
+
+【步骤 3】执行修复命令
+-----------------------
+
+======== 方式 A：Windows PowerShell 用户 ========
+
+打开 PowerShell，复制以下命令执行：
+
+# 1. 进入项目根目录（请修改为您的实际路径）
+cd "D:\AI of Oz\StudyWithUoA\SMOz"
+
+# 2. 删除旧的依赖锁文件
+Remove-Item "sm-token-server\package-lock.json" -Force -ErrorAction SilentlyContinue
+
+# 3. 生成 SSL 证书（用于 HTTPS 本地开发）
+docker run --rm -v "${PWD}\sm-docker-local\certs:/certs" alpine/openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /certs/local-key.pem -out /certs/local-cert.pem -subj "/C=US/ST=State/L=City/O=Organization/CN=*.app.localhost"
+
+# 4. 进入 Docker Compose 目录
+cd sm-docker-local
+
+# 5. 停止并删除所有现有容器
+docker-compose down
+
+# 6. 删除旧的 token-server 镜像
+docker rmi sm-docker-local-token-server -f
+
+# 7. 无缓存重新构建 token-server
+docker-compose build --no-cache token-server
+
+# 8. 启动所有服务
+docker-compose up -d
+
+# 9. 等待服务启动（约 10-15 秒）
+Start-Sleep -Seconds 15
+
+# 10. 查看服务状态
+docker-compose ps
+
+# 11. 查看 token-server 日志（应该显示 "Express server listening on port 3000"）
+docker logs token-server
+
+# 12. 查看 web-client 日志（应该显示 "Compiled successfully!"）
+docker logs sm-web-client --tail=20
+
+
+======== 方式 B：Linux/Mac 用户 ========
+
+打开终端，复制以下命令执行：
+
+# 1. 进入项目根目录（请修改为您的实际路径）
+cd "/path/to/your/SMOz"
+
+# 2. 删除旧的依赖锁文件
+rm -f sm-token-server/package-lock.json
+
+# 3. 生成 SSL 证书
+docker run --rm -v "$(pwd)/sm-docker-local/certs:/certs" alpine/openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /certs/local-key.pem -out /certs/local-cert.pem -subj "/C=US/ST=State/L=City/O=Organization/CN=*.app.localhost"
+
+# 4. 进入 Docker Compose 目录
+cd sm-docker-local
+
+# 5. 停止并删除所有现有容器
+docker-compose down
+
+# 6. 删除旧的 token-server 镜像
+docker rmi sm-docker-local-token-server -f
+
+# 7. 无缓存重新构建 token-server
+docker-compose build --no-cache token-server
+
+# 8. 启动所有服务
+docker-compose up -d
+
+# 9. 等待服务启动
+sleep 15
+
+# 10. 查看服务状态
+docker-compose ps
+
+# 11. 查看 token-server 日志
+docker logs token-server
+
+# 12. 查看 web-client 日志
+docker logs sm-web-client --tail=20
+
+
+【步骤 4】访问应用
+-------------------
+
+在浏览器中访问：https://sm-web.app.localhost
+
+⚠️ 注意：
+1. 必须使用 HTTPS（不是 HTTP）
+2. 浏览器会显示证书安全警告，这是正常的（因为使用自签名证书）
+3. 处理证书警告：
+   - Chrome/Edge: 点击 "高级" → "继续前往 sm-web.app.localhost (不安全)"
+   - Firefox: 点击 "高级" → "接受风险并继续"
+
+
+【步骤 5】验证所有服务
+-----------------------
+
+所有服务的访问地址：
+✅ Web 前端：      https://sm-web.app.localhost
+✅ Token 服务：    https://token-server.app.localhost
+✅ 编排服务：      https://orchestration-server.app.localhost
+✅ Oz AI 服务：    https://oz-server.app.localhost
+
+检查命令：
+cd sm-docker-local
+docker-compose ps
+
+所有服务状态应显示 "Up" 或 "Running"
+
+
+================================================================================
+                            常见问题排查
+================================================================================
+
+问题 1：docker-compose 命令不存在
+解决：安装 Docker Desktop 或使用 docker compose（注意是空格不是横杠）
+
+问题 2：端口被占用
+解决：
+- 检查 3000, 3001, 3002, 8080 端口是否被其他程序占用
+- Windows: netstat -ano | findstr "3000"
+- Linux/Mac: lsof -i :3000
+
+问题 3：服务启动失败
+解决：
+- 查看日志：docker logs <容器名>
+- 重新构建：docker-compose build --no-cache
+- 清理所有容器：docker-compose down -v
+
+问题 4：still shows buffer-equal-constant-time error
+解决：
+- 确认 package.json 已正确更新
+- 确认已删除 package-lock.json
+- 确认使用了 --no-cache 参数重新构建
+
+问题 5：无法访问 https://sm-web.app.localhost
+解决：
+- 确认证书已生成：ls sm-docker-local/certs/
+- 应该看到 local-cert.pem 和 local-key.pem
+- 重启 Traefik：docker-compose restart traefik
+
+
+================================================================================
+                            技术细节说明
+================================================================================
+
+修复涉及的文件：
+1. sm-token-server/package.json - 更新依赖版本
+2. sm-token-server/Dockerfile - 固定 Node.js 版本
+3. sm-token-server/package-lock.json - 删除（让其重新生成）
+4. sm-docker-local/certs/local-cert.pem - 新生成的 SSL 证书
+5. sm-docker-local/certs/local-key.pem - 新生成的私钥
+
+依赖更新详情：
+- jsonwebtoken 8.4.0 → 9.0.2（修复 buffer-equal-constant-time 兼容性问题）
+- express 4.16.4 → 4.18.2（安全更新）
+- typescript 3.2.2 → 5.2.2（语言特性更新）
+- 所有其他依赖同步更新到兼容版本
+
+Docker 镜像：
+- 使用 Node.js 18 LTS (Alpine Linux)
+- 多阶段构建优化镜像大小
+- 生产环境排除 devDependencies
+
+网络架构：
+- Traefik 作为反向代理
+- 所有服务通过 Docker 内部网络通信
+- HTTPS 强制跳转确保安全
+
+
+================================================================================
+                            联系与支持
+================================================================================
+
+如果遇到问题：
+1. 检查 Docker Desktop 是否正常运行
+2. 确认所有文件修改正确
+3. 查看 Docker 容器日志定位问题
+4. 重新执行完整修复步骤
+
+修复完成后：
+- 开发环境已就绪
+- 所有服务正常运行
+- 可以开始正常开发工作
+
+================================================================================
+                                结束
+================================================================================
+
+================================================================================
+                        第五步：重启 Traefik（确保路由注册）
+================================================================================
+
+【重启 Traefik 服务】
+--------------------
+
+有时 Traefik 需要重启才能正确识别所有服务路由。
+
+Windows PowerShell:
+```powershell
+cd "D:\AI of Oz\StudyWithUoA\SMOz\sm-docker-local"
+docker-compose restart reverse-proxy
+Start-Sleep -Seconds 15
+```
+
+Mac/Linux:
+```bash
+cd ~/Projects/SMOz/sm-docker-local
+docker-compose restart reverse-proxy
+sleep 15
+```
+
+
+【验证路由注册】
+---------------
+
+Windows PowerShell:
+```powershell
+docker logs traefik --tail=50 | Select-String "Adding route"
+```
+
+Mac/Linux:
+```bash
+docker logs traefik --tail=50 | grep "Adding route"
+```
+
+✅ 应该看到以下路由：
+```
+Adding route for sm-web.app.localhost with TLS options default
+Adding route for token-server.app.localhost with TLS options default
+Adding route for orchestration-server.app.localhost with TLS options default
+Adding route for oz-server.app.localhost with TLS options default
+```
+问题找到了！浏览器需要分别信任每个子域名的证书。
+
+请依次访问以下地址，每个都点击"高级" → "继续访问"：
+
+1. https://token-server.app.localhost
+   （点击"高级" → "继续访问"）
+
+2. https://orchestration-server.app.localhost
+   （点击"高级" → "继续访问"）
+
+3. https://oz-server.app.localhost
+   （点击"高级" → "继续访问"）
+
+4. 回到主页面刷新：
+   https://sm-web.app.localhost
+   （按 F5 刷新）
+
+完成后应该就能正常使用了！
+
+
+
+================================================================================
+                        第六步：访问应用
+================================================================================
+
+【浏览器访问步骤】
+-----------------
+
+1. 主应用：https://sm-web.app.localhost
+   - 点击"高级" → "继续访问"
+   - 或在页面上输入：thisisunsafe（Chrome/Edge）
+file:///D:/PHD/AI%20of%20Oz/SMOz/oz-server/index_new.html
+2. 依次访问并接受证书（重要！）：
+   https://token-server.app.localhost
+   https://orchestration-server.app.localhost
+   https://oz-server.app.localhost
+   
+   每个都要点击"高级" → "继续访问"
+
+3. 返回主应用刷新（F5）
+
+✅ 成功标志：看到应用登录界面或主界面
+
+================================================================================
+                        总结
+================================================================================
+
+✅ 服务停止是正常现象（系统重启、Docker Desktop 关闭等）
+✅ 使用 docker-compose up -d 可以快速恢复
+✅ 等待 Web-Client 编译完成（1-2 分钟）
+✅ 重启 Traefik 确保路由正确注册
+✅ 逐个接受浏览器证书警告

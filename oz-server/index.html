@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI of Oz</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f8ff; /* 更柔和的背景色 */
+        }
+        body {
+            display: flex;
+            height: 100vh;
+        }
+        .avatar-summary-section, .operation-section, .chat-dialogue-section {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+            border-radius: 15px; /* 增加圆角 */
+            margin: 10px; /* 添加间距 */
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08); /* 柔和阴影 */
+        }
+        .avatar-summary-section {
+            width: 35%;
+            height: 100%;
+            background-color: #f5f9ff;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+        }
+
+        .avatar-container {
+            width: 100%;
+            height: 45%;
+            background-color: #ffffff;
+            border: 2px solid rgba(100, 149, 237, 0.3); /* 柔和的边框 */
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .summary-container-wrapper {
+            width: 100%;
+            height: 50%;
+            background-color: #ffffff;
+            border-radius: 12px;
+            padding: 15px;
+            overflow-y: auto;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .operation-section {
+            width: 25%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            background-color: #f5f9ff;
+        }
+        
+        .response-container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            height: 45%;
+        }
+
+        .chat-dialogue-section {
+            width: 40%;
+            display: flex;
+            flex-direction: column;
+            background-color: #f5f9ff;
+        }
+        
+        .chat-history-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        #user-input-wrapper {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .avatar-container video {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+        
+        h3 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #4a6fa5;
+            margin: 10px 0;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        .button-container {
+            margin-top: auto;
+            display: flex;
+            justify-content: center;
+            padding: 10px 0;
+        }
+        
+        .button-container button {
+            margin: 5px;
+            height: 45px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            font-family: 'Arial', sans-serif;
+            font-size: 16px;
+            padding: 0 20px;
+            border: none;
+            cursor: pointer;
+            width: 150px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-success {
+            background-color: #6495ED;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #4169E1;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background-color: #A9CCE3;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #7FB3D5;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background-color: #8A9EBF;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .btn-info {
+            background-color: #A8C9FA;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover, .btn-info:hover {
+            background-color: #e0e0e0;
+            transform: translateY(-2px);
+        }
+
+        .active-primary {
+            background-color: #1E3A8A;
+        }
+
+        .active-primary:hover {
+            background-color: #162E6A;
+        }
+
+        .active-info {
+            background-color: #60A5FA;
+        }
+
+        .active-info:hover {
+            background-color: #367DC8;
+        }
+
+        #user-input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            box-shadow: none;
+            font-size: 16px;
+            transition: border 0.3s ease;
+        }
+        
+        #user-input:focus {
+            border-color: #6495ED;
+            outline: none;
+        }
+        
+        #chat-history p {
+            padding: 10px;
+            border-radius: 8px;
+            margin: 5px 0;
+            line-height: 1.5;
+        }
+        
+        /* 美化滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #c1d3f0;
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6495ED;
+        }
+    </style>
+</head>
+<body>
+    <!-- Avatar Video and Summary -->
+    <div class="avatar-summary-section">
+        <div class="avatar-container">
+            <video id="avtar-video" autoplay></video>
+        </div>
+        <div class="summary-container-wrapper">
+            <h3>Conversation Summary</h3>
+            <div id="summary-container">
+                <p id="model3-response"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Operation Section -->
+    <div class="operation-section">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="autoSubmitToggle" checked>
+                <label class="form-check-label" for="autoSubmitToggle">Mediator Mode</label>
+            </div>
+        </div>
+        <div class="response-container" id="default-response-wrapper">
+            <h3>Default Response:</h3>
+            <div style="flex-grow: 1; overflow-y: auto;">
+                <p id="default-response">I'm not able to respond to that, but I'm here if you want to talk about other topics.</p>
+            </div>
+            <div class="button-container">
+                <button id="send-default-btn" type="button" class="btn btn-secondary">Apply</button>
+            </div>
+        </div>
+        <div class="response-container" id="proposed-response-wrapper">
+            <h3>Generated Response:</h3>
+            <div id="model2-response" style="flex-grow: 1; overflow-y: auto;"></div>
+            <div class="button-container">
+                <button id="approve-btn" type="button" class="btn btn-success">Approve</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat History and Dialogue -->
+    <div class="chat-dialogue-section">
+        <div class="chat-history-container">
+            <h3>Chat History</h3>
+            <div id="chat-history"></div>
+        </div>
+        <div id="user-input-wrapper">
+            <textarea id="user-input" placeholder="Type your message here..." rows="4"></textarea>
+            <div class="button-container">
+                <button id="submit-btn" type="button" class="btn btn-primary">Submit</button>
+                <button id="refine-btn" type="button" class="btn btn-info">Refine with AI</button>
+            </div>
+        </div>
+    </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+<script>
+let chatHistory = [];
+
+let ifExplain = false;
+
+function addMessageToChat(sender, message, sensitivity = '') {
+    const timestamp = new Date().toLocaleTimeString();
+    chatHistory.push({ sender, message, timestamp, sensitivity });
+    updateChatDisplay();
+}
+
+function updateChatDisplay() {
+    const chatHistoryElement = document.getElementById('chat-history');
+    chatHistoryElement.innerHTML = ''; // 清空当前聊天历史显示
+    chatHistory.forEach(msg => {
+        const messageElement = document.createElement('p');
+        messageElement.textContent = `[${msg.timestamp}] ${msg.sender.toUpperCase()}: ${msg.message}`;
+        messageElement.style.flex = '1'; // 确保消息可以伸展填满除按钮外的空间
+
+        // 根据敏感度设置消息颜色
+        if (msg.sender.toLowerCase() === 'user') {
+            let sensitivityLabel = '';
+
+            switch (msg.sensitivity.toLowerCase()) {
+                case 'green':
+                    messageElement.style.color = '#2E8B57'; // 深绿色
+                    messageElement.style.backgroundColor = '#E8F5E9'; // 浅绿色背景
+                    sensitivityLabel = ' [Sensitivity: Low]';
+                    break;
+                case 'yellow':
+                    messageElement.style.color = '#B7950B'; // 深黄色
+                    messageElement.style.backgroundColor = '#FFF9C4'; // 浅黄色背景
+                    sensitivityLabel = ' [Sensitivity: Medium]';
+                    break;
+                case 'red':
+                    messageElement.style.color = '#B71C1C'; // 深红色
+                    messageElement.style.backgroundColor = '#FFEBEE'; // 浅红色背景
+                    sensitivityLabel = ' [Sensitivity: High]';
+                    break;
+                default:
+                    messageElement.style.color = '#333333';
+                    messageElement.style.backgroundColor = '#F5F5F5'; // 浅灰色背景
+            }
+            messageElement.textContent += sensitivityLabel;
+        } else {
+            // Digital Human 消息样式
+            messageElement.style.color = '#1565C0'; // 蓝色
+            messageElement.style.backgroundColor = '#E3F2FD'; // 浅蓝色背景
+        }
+
+        // 创建包裹消息和按钮的容器
+        const messageContainer = document.createElement('div');
+        messageContainer.style.display = 'flex';
+        messageContainer.style.justifyContent = 'space-between';
+        messageContainer.style.alignItems = 'center';
+        messageContainer.style.marginBottom = '10px';
+
+        messageContainer.appendChild(messageElement);
+
+        if (msg.sender.toLowerCase() === 'user' && ifExplain) {
+            const explanationButton = document.createElement('button');
+            explanationButton.textContent = 'Explanation';
+            explanationButton.style.marginLeft = '10px';
+            explanationButton.style.padding = '5px 10px';
+            explanationButton.style.borderRadius = '5px';
+            explanationButton.style.border = 'none';
+            explanationButton.style.backgroundColor = '#A8C9FA';
+            explanationButton.style.color = 'white';
+            explanationButton.style.cursor = 'pointer';
+
+            explanationButton.onclick = function() {
+                alert(msg.explanation || 'No explanation provided.');
+            };
+
+            messageContainer.appendChild(explanationButton);
+        }
+
+        chatHistoryElement.appendChild(messageContainer);
+    });
+}
+
+var ws = new WebSocket("wss://oz-server.app.localhost/ws");
+// 当点击 "Approve Proposed Response" 按钮时，设置输入框内容并更新按钮样式
+// document.getElementById('approve-btn').addEventListener('click', function() {
+//     const approvedMessage = document.getElementById('model2-response').innerText;
+//     document.getElementById('user-input').value = approvedMessage;
+//     // 清空Generated Response内容
+//     document.getElementById('model2-response').innerText = '';
+//     updateButtonStyles(); // 手动调用函数更新按钮样式
+// });
+
+// ... 现有代码 ...
+
+ws.onmessage = function(event) {
+    if (!event.data) {
+        return;
+    }
+    const { kind, human_message, ai_proposed_message, sensitivity } = JSON.parse(event.data);
+
+    if (kind === 'summary') {
+        const summaryRes = document.getElementById('model3-response');
+        const { summary } = JSON.parse(event.data);
+        summaryRes.textContent = summary;
+        return;
+    } else if (kind === 'refined') {
+        const { message } = JSON.parse(event.data);
+        document.getElementById('user-input').value = message;
+        alert("AI refine has been completed!");
+        return;
+    } else {
+        addMessageToChat('user', human_message, sensitivity);
+
+        // Set AI proposed response
+        const proposedRes = document.getElementById('model2-response');
+        proposedRes.textContent = ai_proposed_message; // 新的response产生时显示内容
+        
+        // 检查是否启用自动提交
+        if (!document.getElementById('autoSubmitToggle').checked) {
+            // 自动提交模式
+            document.getElementById('user-input').value = ai_proposed_message;
+            // 自动点击提交按钮
+            setTimeout(() => {
+                document.getElementById('submit-btn').click();
+            }, 500); // 短暂延迟确保UI更新
+        }
+    }
+};
+
+// 当用户在输入框中输入内容时，触发颜色变化
+document.getElementById('user-input').addEventListener('input', function() {
+    updateButtonStyles();
+});
+
+// 当点击 "Approve Proposed Response" 按钮时，设置输入框内容并更新按钮样式
+document.getElementById('approve-btn').addEventListener('click', function() {
+    const approvedMessage = document.getElementById('model2-response').innerText;
+    document.getElementById('user-input').value = approvedMessage;
+    updateButtonStyles(); // 手动调用函数更新按钮样式
+});
+
+
+
+// 当点击 "Send Default" 按钮时，设置输入框内容并更新按钮样式
+document.getElementById('send-default-btn').addEventListener('click', function() {
+    const defaultMessage = "I'm not able to respond to that, but I'm here if you want to talk about other topics.";
+    document.getElementById('user-input').value = defaultMessage;
+    updateButtonStyles(); // 手动调用函数更新按钮样式
+});
+
+// 更新按钮样式的函数
+function updateButtonStyles() {
+    const userInput = document.getElementById('user-input').value;
+    const submitButton = document.getElementById('submit-btn');
+    const refineButton = document.getElementById('refine-btn');
+
+    if (userInput.trim() !== '') {
+        submitButton.classList.add('active-primary');
+        refineButton.classList.add('active-info');
+    } else {
+        submitButton.classList.remove('active-primary');
+        refineButton.classList.remove('active-info');
+    }
+}
+
+document.getElementById('refine-btn').addEventListener('click', () => {
+    const userInput = document.getElementById('user-input').value;
+    if (ws.readyState === WebSocket.OPEN && userInput) {
+        ws.send(JSON.stringify({kind: "refine", message: userInput, intervene: false}));
+    }
+});
+
+// Handle the "Submit" button click event
+document.getElementById('submit-btn').addEventListener('click', async () => {
+    const userInput = document.getElementById('user-input').value;
+    if (ws.readyState === WebSocket.OPEN && userInput) {
+        ws.send(JSON.stringify({kind: "message", message: userInput, intervene: false}));
+        addMessageToChat('Digital Human', userInput);
+        document.getElementById('user-input').value = ''; // 清空输入栏
+        document.getElementById('model2-response').innerText = ''; // 清空Proposed Response内容
+        updateButtonStyles(); // 更新按钮样式
+    }
+});
+
+// 屏幕共享代码，用于Avatar视频显示
+if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+    navigator.mediaDevices.getDisplayMedia({ video: true })
+        .then(stream => {
+            const videoElement = document.getElementById('avtar-video');
+            videoElement.srcObject = stream;
+        })
+        .catch(err => {
+            console.error("Error capturing screen:", err);
+        });
+} else {
+    console.log("Screen capture is not supported in this browser.");
+}
+</script>
+
+</body>
+</html>

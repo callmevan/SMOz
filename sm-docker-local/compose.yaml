@@ -1,0 +1,143 @@
+version: '3.8'
+services:
+  reverse-proxy:
+    image: traefik:v2.4.7
+    container_name: traefik
+    labels:
+      - "--api.insecure=true"
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik=true"
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+      - "traefik.docker.network=proxy"
+    networks:
+      - proxy
+    ports:
+      - 8086:80
+      - 443:443
+      - 8083:8080
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./traefik/dynamic_conf.yaml:/etc/traefik/dynamic_conf.yaml:ro
+      - ./traefik/traefik.yaml:/etc/traefik/traefik.yaml:ro
+      - ./certs:/etc/certs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  token-server:
+    build:
+      context: ../sm-token-server
+      dockerfile: Dockerfile
+    container_name: token-server
+    depends_on:
+      - reverse-proxy
+    env_file:
+      # - SESSION_SERVER=
+      # - JWT_PUBLIC_KEY=
+      # - JWT_PRIVATE_KEY=
+      - ../sm-token-server/.env.docker-local
+    environment:
+      - NODE_ENV=production
+      - UI_SERVER=sm-web.app.localhost
+      - ORCHESTRATION_SERVER=orchestration-server.app.localhost
+      - PRODUCTION_PERSONA=false
+      - CONTROL_VIA_BROWSER=true
+      - ORIGIN=https://sm-web.app.localhost
+    ports:
+      - 3000:3000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.token-server.rule=Host(`token-server.app.localhost`)"
+      - "traefik.http.routers.token-server.tls=true"
+      - "traefik.http.services.token-server.loadbalancer.server.port=3000"
+      - "traefik.docker.network=proxy"
+    networks:
+      - proxy
+    restart: always
+
+  orchestration-server:
+    build: 
+      context: ../sm-orchestration
+      dockerfile: Dockerfile
+    container_name: orchestration-server
+    depends_on:
+      - reverse-proxy
+    env_file: 
+      - ../sm-orchestration/.env
+    environment:
+      - NODE_ENV=production
+      - BOT_ID=RR64YJU0DD
+      - BOT_ALIAS_ID=LS8PLZLCA7
+      - LOCALE_ID=en_AU
+      - AWS_REGION=ap-southeast-2
+    ports:
+      - 8080:8080
+      # - 9229:9229
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.orchestration-server.rule=Host(`orchestration-server.app.localhost`)"
+      - "traefik.http.routers.orchestration-server.tls=true"
+      - "traefik.http.services.orchestration-server.loadbalancer.server.port=8080"
+      - "traefik.docker.network=proxy"
+    restart: always
+    networks:
+      - proxy
+    # volumes:
+    #   - ../sm-orchestration:/usr/src/app
+    # command: npm run debug
+
+  web-client:
+    build:
+      context: ../sm-avatar-web
+      dockerfile: Dockerfile
+    container_name: sm-web-client
+    depends_on:
+      - reverse-proxy
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_TOKEN_URL=https://token-server.app.localhost/auth/authorize
+      - REACT_APP_PERSONA_AUTH_MODE=1
+      - REACT_APP_ORCHESTRATION_MODE=true
+      - REACT_APP_ORCHESTRATION_URL=https://orchestration-server.app.localhost
+      - ESLINT_NO_DEV_ERRORS=true
+      - GENERATE_SOURCEMAP=false
+      - REACT_APP_SESSION_SERVER=dh.az.soulmachines.cloud
+      - PORT=3001
+    ports:
+      - 3001:3001
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.web-client.rule=Host(`sm-web.app.localhost`)"
+      - "traefik.http.routers.web-client.tls=true"
+      - "traefik.http.services.web-client.loadbalancer.server.port=3001"
+      - "traefik.docker.network=proxy"
+    networks:
+      - proxy
+
+  oz-server:
+    build: 
+      context: ../oz-server
+      dockerfile: Dockerfile
+    container_name: oz-server
+    depends_on:
+      - reverse-proxy
+    ports:
+      - 3002:3002
+    environment:
+      - OPENAI_API_KEY=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
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.oz-server.rule=Host(`oz-server.app.localhost`)"
+      - "traefik.http.routers.oz-server.tls=true"
+      - "traefik.http.services.oz-server.loadbalancer.server.port=3002"
+      - "traefik.docker.network=proxy"
+    restart: always
+    networks:
+      - proxy
+    volumes:
+      - ./data:/code/data
+
+networks:
+  proxy:
+    external: true

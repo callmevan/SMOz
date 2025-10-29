@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OZ Moderator</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <style>
+        #user-input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .parent-container {
+            height: auto; /* 或适合的值 */
+        }
+        .button-container {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+        }
+        .button-container button {
+            flex: 1;
+            margin: 5px;
+            height: 50px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .response-container {
+            margin-bottom: 10px;
+        }
+        #intervene-status {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        #chat-history-container {
+            height: 160px;
+            overflow-y: scroll;
+            border: 1px solid #ddd;
+            padding: 2px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        #avtar-video, #video {
+            width: 80%;
+            height: 100%;
+            object-fit: cover; /* 保证视频内容适应容器 */
+        }
+        .video-container {
+            width: 80%;
+            padding-top: 100%; /* 1:1 宽高比 */
+            position: relative;
+        }
+        .video-container video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .green {
+            color: green;
+        }
+        .yellow {
+            color: yellow;
+        }
+        .red {
+            color: red;
+        }
+        .fixed-container {
+            height: 60px; /* 设置固定高度 */
+            overflow-y: auto; /* 超出部分显示垂直滚动条 */
+            border: 1px solid #ddd; /* 添加边框 */
+            padding: 0px; /* 内边距 */
+            margin-bottom: 0px; /* 下边距 */
+        }
+        .summary-container {
+            height: 180px; /* 设置固定高度 */
+            overflow-y: auto; /* 超出部分显示垂直滚动条 */
+            border: 1px solid #ddd; /* 添加边框 */
+            padding: 10px; /* 内边距 */
+            margin-bottom: 10px; /* 下边距 */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h3 {
+            font-size: 24px; /* 设置字体大小 */
+            font-family: 'Arial', sans-serif; /* 设置字体 */
+            font-weight: bold; /* 设置字体加粗 */
+            color: #333; /* 设置字体颜色 */
+        }
+        #heart-rate-status {
+            font-size: 24px; /* 与标题相同的字体大小 */
+            font-family: 'Arial', sans-serif; /* 与标题相同的字体 */
+            font-weight: bold; /* 设置加粗 */
+        }
+
+    </style>
+</head>
+<body>
+<div class="container-fluid text-center">
+    <div class="row">
+        <div class="col-md-6">
+            <!-- Participant Mental State Section -->
+            <div class="row">
+                <div class="col-12">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 150px;">
+                        <h3>Participant Mental State</h3>
+                        <div id="heart-rate-indicator" style="display: none;">
+                            <span id="heart-rate-status"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Feeds -->
+            <div class="row" style="padding-top: 100px;">
+                <div class="col-md-6">
+                    <h3>Digital Human:</h3>
+                    <video id="avtar-video" width="400" height="600" autoplay style="border-radius: 10px;"></video>
+                </div>
+                <div class="col-md-6">
+                    <h3>Participant:</h3>
+                    <video id="video" width="400" height="600" autoplay style="border-radius: 10px;"></video>
+                </div>
+            </div>
+
+            <!-- Summary of the Conversation -->
+            <div class="row" style="padding-top: 150px;">
+                <div class="col-12">
+                    <h3>Summary of the conversation:</h3>
+                    <div id="summary-container" class="summary-container" style="border-radius: 10px;">
+                        <p id="model3-response"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <!-- Chat History -->
+            <div class="row" style="height: 200px;">
+                <div class="col-12">
+                    <h3>Chat History:</h3>
+                    <div id="chat-history-container" style="height: 220px; overflow-y: scroll; border: 1px solid #ddd; padding: 10px; border-radius: 10px;">
+                        <div id="chat-history"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Response and Message Sections -->
+            <div class="row" style="padding-top: 65px;">
+                <div class="col-12">
+                    <hr style="border: 1px solid #ddd; border-radius: 10px;">
+                    <!-- Proposed Response Section -->
+                    <div class="response-container" id="proposed-response-wrapper" style="background-color: #E6E6FA; padding: 1px; border-radius: 10px;">
+                        <h3>Proposed Response:</h3>
+                        <div id="model2-response" class="fixed-container" style="border-radius: 10px;"></div>
+                        <button id="approve-btn" type="button" class="btn btn-success" style="border-radius: 10px; width: 150px;">Approve</button>
+                    </div>
+                    <hr style="border: 1px solid #ddd; border-radius: 10px;">
+                    <!-- Default Response Section -->
+                    <div class="response-container" id="default-response-wrapper" style="background-color: #FFFFE0; padding: 25px; border-radius: 10px;">
+                        <h3>Default Response:</h3>
+                        <p id="default-response">I am sorry, I am not the right person to discuss this topic with you. Perhaps you should consult some professionals.</p>
+                        <button id="send-default-btn" type="button" class="btn btn-secondary" style="border-radius: 10px; width: 150px;">Send</button>
+                    </div>
+                    <!-- User Input Section -->
+                    <div id="user-input-wrapper" style="background-color: #ADD8E6; padding: 10px; border-radius: 10px; margin-top: 10px;">
+                        <textarea id="user-input" placeholder="Type your message here..." rows="5" style="width: 100%; padding: 20px; border-radius: 10px;"></textarea>
+                        <div class="button-container" style="padding-top: 10px;">
+                            <button id="submit-btn" type="button" class="btn btn-primary" style="border-radius: 10px;">Submit</button>
+                            <button id="refine-btn" type="button" class="btn btn-info" style="border-radius: 10px;">Refine with AI</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+<script>
+let chatHistory = [];
+
+const heartRateIndicator = document.getElementById('heart-rate-indicator');
+const heartRateStatus = document.getElementById('heart-rate-status');
+
+function addMessageToChat(sender, message, sensitivity = '') {
+    const timestamp = new Date().toLocaleTimeString();
+    chatHistory.push({ sender, message, timestamp, sensitivity });
+    updateChatDisplay();
+}
+
+function updateChatDisplay() {
+    const chatHistoryElement = document.getElementById('chat-history');
+    chatHistoryElement.innerHTML = ''; // Clear current chat history display
+    chatHistory.forEach(msg => {
+        const messageElement = document.createElement('p');
+        messageElement.textContent = `[${msg.timestamp}] ${msg.sender.toUpperCase()}: ${msg.message}`;
+
+        // 根据敏感度设置消息颜色
+        if (msg.sender.toLowerCase() === 'user') {
+            let sensitivityLabel = '';
+            switch (msg.sensitivity.toLowerCase()) {
+                case 'green':
+                    messageElement.style.color = 'green';
+                    sensitivityLabel = ' [Sensitivity: Low]';
+                    heartRateStatus.textContent = '⬇';
+                    heartRateStatus.style.color = 'green';
+                    heartRateIndicator.style.display = 'block';
+                    break;
+                case 'yellow':
+                    messageElement.style.color = '#FFD700'; // 黄色
+                    sensitivityLabel = ' [Sensitivity: Medium]';
+                    heartRateStatus.textContent = '⬆';
+                    heartRateStatus.style.color = 'red';
+                    heartRateIndicator.style.display = 'block';
+                    break;
+                case 'red':
+                    messageElement.style.color = 'red';
+                    sensitivityLabel = ' [Sensitivity: High]';
+                    heartRateStatus.textContent = '⬆';
+                    heartRateStatus.style.color = 'red';
+                    heartRateIndicator.style.display = 'block';
+                    break;
+                default:
+                    messageElement.style.color = 'black';
+            }
+            messageElement.textContent += sensitivityLabel;
+        }
+
+        chatHistoryElement.appendChild(messageElement);
+    });
+}
+
+var ws = new WebSocket("wss://oz-server.app.localhost/ws");
+ws.onmessage = function(event) {
+    if (!event.data) {
+        return;
+    }
+    const { kind, human_message, ai_proposed_message, sensitivity } = JSON.parse(event.data);
+
+    if (kind === 'summary') {
+        const summaryRes = document.getElementById('model3-response');
+        const { summary } = JSON.parse(event.data);
+        summaryRes.textContent = summary;
+        return;
+    } else if (kind === 'refined') {
+        const { message } = JSON.parse(event.data);
+        document.getElementById('user-input').value = message;
+        alert("AI refine has been completed!");
+        return;
+    } else {
+        addMessageToChat('user', human_message, sensitivity);
+
+        // Set AI proposed response
+        const proposedRes = document.getElementById('model2-response');
+        proposedRes.textContent = ai_proposed_message;
+    }
+};
+
+document.getElementById('approve-btn').addEventListener('click', function() {
+    const approvedMessage = document.getElementById('model2-response').innerText;
+    if (ws.readyState === WebSocket.OPEN && approvedMessage) {
+        ws.send(JSON.stringify({kind: "approve", message: approvedMessage, intervene: false}));
+        addMessageToChat('Digital Human', approvedMessage);
+        document.getElementById('model2-response').innerText = '';
+    }
+});
+
+document.getElementById('refine-btn').addEventListener('click', () => {
+    const userInput = document.getElementById('user-input').value;
+    if (ws.readyState === WebSocket.OPEN && userInput) {
+        ws.send(JSON.stringify({kind: "refine", message: userInput, intervene: false}));
+    }
+});
+
+document.getElementById('submit-btn').addEventListener('click', async () => {
+    const userInput = document.getElementById('user-input').value;
+    if (ws.readyState === WebSocket.OPEN && userInput) {
+        ws.send(JSON.stringify({kind: "message", message: userInput, intervene: false}));
+    }
+    addMessageToChat('Digital Human', userInput);
+    document.getElementById('user-input').value = '';
+    document.getElementById('model2-response').innerText = ''; // 清空Proposed Response内容
+});
+
+if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        .then(function(stream) {
+            const videoElement = document.getElementById('video');
+            if ("srcObject" in videoElement) {
+                videoElement.srcObject = stream;
+            } else {
+                videoElement.src = window.URL.createObjectURL(stream);
+            }
+            videoElement.play();
+        })
+        .catch(function(err) {
+            console.error("Error accessing media devices.", err);
+        });
+} else {
+    console.log("Media Devices API not supported.");
+}
+
+if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+    navigator.mediaDevices.getDisplayMedia({ video: true })
+        .then(stream => {
+            const videoElement = document.getElementById('avtar-video');
+            videoElement.srcObject = stream;
+        })
+        .catch(err => {
+            console.error("Error capturing screen:", err);
+        });
+} else {
+    console.log("Screen capture is not supported in this browser.");
+}
+
+document.getElementById('send-default-btn').addEventListener('click', () => {
+    const defaultMessage = "I am sorry, I am not the right person to discuss this topic with you. Perhaps you should consult some professionals.";
+    if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ kind: "message", message: defaultMessage, intervene: false }));
+    }
+    addMessageToChat('Digital Human', defaultMessage);
+    document.getElementById('default-response').textContent = defaultMessage;
+});
+
+</script>
+</body>
+</html>

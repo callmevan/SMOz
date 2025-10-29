@@ -1,0 +1,7 @@
+FastAPI
+uvicorn[standard]
+langchain
+langchain-openai
+openai
+websocket
+groq

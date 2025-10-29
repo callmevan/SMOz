@@ -1,0 +1,10 @@
+
+# directories
+node_modules
+certs
+dist
+.terraform
+
+# files
+.env
+/.DS_Store

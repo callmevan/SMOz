@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "sm-orchestration-debug",
+        "type": "node",
+        "request": "attach",
+        "restart": true,
+        "trace": true,
+        "port": 9229,
+        "remoteRoot": "/usr/src/app",
+        "localRoot": "${workspaceFolder}",
+        
+      }
+    ]
+  }

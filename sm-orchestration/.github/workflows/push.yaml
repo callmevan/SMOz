@@ -1,0 +1,51 @@
+
+name: Build & Push Orchestration Service Image to ECR
+
+on: 
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+    
+
+env:
+  ECR_REPO: ${{ vars.ECR_REPO}} # e.g. 123456789012.dkr.ecr.us-east-1.amazonaws.com/sm-orchestration
+  PORT: ${{ vars.PORT}} # e.g. 8080
+
+jobs:
+  Build:
+    name: Image Build
+    runs-on: ubuntu-latest
+    environment: development
+    permissions: write-all
+    steps:
+    - name: Checkout the code
+      uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v3
+      with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME_ECR }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+    - name: Build with Docker
+      run: |
+        SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-5)
+        IMAGE_TAG=${{ vars.VERSION }}-$SHA_SHORT
+        echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+        docker build -t $ECR_REPO:$IMAGE_TAG . 
+    - name: Push the image to ECR
+      run: |
+        aws ecr get-login-password --region ${{ vars.AWS_REGION }} | docker login --username AWS --password-stdin  $ECR_REPO
+        docker images
+        echo $IMAGE_TAG
+        echo $ECR_REPO
+        docker push  $ECR_REPO:$IMAGE_TAG
+        
+    - name: trigger set tag workflow
+      run: |
+        curl -H "Accept: application/vnd.github.everest-preview+json" \
+        -H "Authorization: token ${{ secrets.SM_PIPELINE_PAT }}" --request POST \
+        --data '{"event_type": "set-image-tag" , "client_payload": { "key": "sm_orchestration_version", "value": "'"$IMAGE_TAG"'" }}' \
+        https://api.github.com/repos/abi-sm/sm-deploy/dispatches
+      
