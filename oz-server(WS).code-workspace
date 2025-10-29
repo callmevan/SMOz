@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"path": "oz-server"
+		},
+		{
+			"path": "sm-avatar-web"
+		},
+		{
+			"path": "sm-docker-local"
+		},
+		{
+			"path": "sm-orchestration"
+		},
+		{
+			"path": "sm-token-server"
+		}
+	]
+}
