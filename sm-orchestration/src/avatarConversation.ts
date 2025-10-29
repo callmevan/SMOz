@@ -39,17 +39,39 @@ User: I'm not sure. It's been a while.
 }
 
 export class TokuHoaAvatarConversation implements AvatarConversation {
-    firstMessage: string[] = [
-        '@pronounce(Kia ora, kee ora), it is great to see you again',
-        'How are you feeling today?'
+    // Array of greeting variations - one will be randomly selected
+    private greetingVariations: string[][] = [
+        [
+            '@pronounce(Kia ora, kee ora), it is great to see you again',
+            'How are you feeling today?'
+        ],
+        [
+            '@pronounce(Kia ora, kee ora), welcome back',
+            'How have you been?'
+        ],
+        [
+            '@pronounce(Kia ora, kee ora), good to see you',
+            'How are things with you today?'
+        ],
+        [
+            '@pronounce(Kia ora, kee ora), nice to connect with you again',
+            'How is your day going?'
+        ],
+        [
+            '@pronounce(Kia ora, kee ora), it is wonderful to see you',
+            'How are you doing today?'
+        ]
     ];
+
+    firstMessage: string[] = this.getRandomGreeting();
+
     messagesHistory: MessageItem[] = [
         {
             role: "system",
             content: `
-            As a compassionate assistant, your role is to support individuals dealing with mental health issues. 
-            Keep your interactions conversational and a very short sentence. Ideally less than 5 words. Begin by inquiring about their current emotional state. 
-            Once they've shared their feelings, encourage them to elaborate further. If they provide more details about their emotions, 
+            As a compassionate assistant, your role is to support individuals dealing with mental health issues.
+            Keep your interactions conversational and a very short sentence. Ideally less than 5 words. Begin by inquiring about their current emotional state.
+            Once they've shared their feelings, encourage them to elaborate further. If they provide more details about their emotions,
             proceed to ask about the last time they experienced happiness. Remember to pace your questions, asking them one at a time.
             `
         }
@@ -57,6 +79,11 @@ export class TokuHoaAvatarConversation implements AvatarConversation {
     avatarName: string = "Toku Hoa";
     userName: string;
     inactiveMessage: string = "It's been a while. Are you ok?";
+
+    private getRandomGreeting(): string[] {
+        const randomIndex = Math.floor(Math.random() * this.greetingVariations.length);
+        return this.greetingVariations[randomIndex];
+    }
 }
 
 export class StaticConversation implements AvatarConversation {
