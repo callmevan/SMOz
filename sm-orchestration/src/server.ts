@@ -172,10 +172,9 @@ wsServer.on('connection', async (ws: WebSocket, req) => {
             _log(`received message from user: ${userText}`);
 
             try {
-                // await avatar.handleReplyMessageAsync(userText);
-                // send to webhook api for modetrator
+                // send to oz-server for moderation and response generation
                 const url = "http://oz-server:3002/generate";
-                _log('sending to webhook:', url);
+                _log('sending to oz-server:', url);
                 const data = { query: userText };
                 const response = await fetch(url, {
                     method: 'POST',
@@ -184,10 +183,23 @@ wsServer.on('connection', async (ws: WebSocket, req) => {
                     },
                     body: JSON.stringify(data),
                 });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    _log('received from oz-server:', result);
+
+                    // Send AI generated response back to avatar
+                    // Note: In mediator mode, this happens automatically via WebSocket
+                    // The wizard will approve/modify the response in index_new.html
+                    _log('oz-server will handle response via WebSocket to mediator interface');
+                } else {
+                    _warn('oz-server returned error:', response.status);
+                    sendWsMessage("Sorry, I'm having trouble processing that right now.");
+                }
             }
             catch (error) {
-                _warn('error:', error);
-                sendWsMessage("Sorry, Something is wrong in my side. Please try again later");
+                _warn('error communicating with oz-server:', error);
+                sendWsMessage("Sorry, something is wrong on my side. Please try again later.");
             }
         }
 

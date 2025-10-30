@@ -108,6 +108,9 @@ async def generate(userQuery: UserQuery):
         print("sending response", res)
         await manager.broadcast(json.dumps(res))
 
+        # Return HTTP response for orchestration-server
+        return res
+
 @app.get("/history")
 async def get_history():
     return chat_history
